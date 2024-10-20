@@ -2,15 +2,18 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Finnhub Webhook Route - Allow both POST and GET methods
 @app.route('/finnhub-webhook', methods=['POST', 'GET'])
 def finnhub_webhook():
-    # Acknowledge GET requests to indicate that the endpoint is active
+    # Acknowledge GET requests
     if request.method == 'GET':
         return jsonify({"message": "Webhook is active and ready to receive POST requests."}), 200
 
-    # For POST requests, we acknowledge receipt before any processing
+    # For POST requests
     if request.method == 'POST':
+        # Check the Content-Type header
+        if request.content_type != 'application/json':
+            return jsonify({"error": "Content-Type must be application/json"}), 415
+
         headers = request.headers
 
         # Verify the secret key for authentication
@@ -18,16 +21,11 @@ def finnhub_webhook():
             return jsonify({"error": "Invalid secret key"}), 403
 
         # Acknowledge receipt of the event immediately
-        # This is crucial to prevent timeouts
-        # Return a 200 status code to confirm receipt
         acknowledgement_response = jsonify({"status": "received"}), 200
         
-        # Process the incoming data after acknowledging the receipt
-        data = request.json
+        # Process the incoming data
+        data = request.json  # This will parse the JSON payload
         print("Received Webhook Event:", data)
-
-        # (Optional) Here you could implement your trading logic
-        # For example, trigger trades based on the received event
 
         return acknowledgement_response  # Return the acknowledgement response
 
