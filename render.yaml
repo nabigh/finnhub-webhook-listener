@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: finnhub-webhook-listener
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
+    envVars:
+      - key: FINNHUB_API_KEY
+        value: YOUR_FINNHUB_API_KEY
+      - key: FINNHUB_WEBHOOK_SECRET
+        value: YOUR_FINNHUB_WEBHOOK_SECRET
