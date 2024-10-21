@@ -14,17 +14,23 @@ def finnhub_webhook():
     print("Request Content-Type:", request.content_type)
     print("Request Body:", request.get_data(as_text=True))
     
-    # Ensure the request content type is application/json
-    if request.content_type != 'application/json':
-        return jsonify({"error": "Unsupported Media Type"}), 415
-    
+    # Check for missing Content-Type and assume JSON if missing
+    if request.content_type is None or request.content_type != 'application/json':
+        logging.warning("Missing or incorrect Content-Type. Assuming application/json.")
+        try:
+            data = request.get_json(force=True)  # Force Flask to treat body as JSON
+        except Exception as e:
+            logging.error(f"Error parsing JSON body: {str(e)}")
+            return jsonify({"error": "Invalid JSON body"}), 400
+    else:
+        data = request.get_json()
+
     # Verify the X-Finnhub-Secret header
     if request.headers.get('X-Finnhub-Secret') != os.getenv('FINNHUB_WEBHOOK_SECRET'):
         return jsonify({"error": "Unauthorized request"}), 403
 
     # Process the JSON body
     try:
-        data = request.get_json()
         if not data:
             raise ValueError("No JSON body found")
         print("Received JSON:", data)
