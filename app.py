@@ -2,32 +2,33 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-@app.route('/finnhub-webhook', methods=['POST', 'GET'])
+# Define the secret key for verifying Finnhub webhook requests
+FINNHUB_SECRET = 'csamt3pr01qobflkbj30'
+
+# Route for handling Finnhub webhooks
+@app.route('/finnhub-webhook', methods=['POST'])
 def finnhub_webhook():
-    # Acknowledge GET requests
-    if request.method == 'GET':
-        return jsonify({"message": "Webhook is active and ready to receive POST requests."}), 200
-
-    # For POST requests
-    if request.method == 'POST':
-        # Check the Content-Type header
-        if request.content_type != 'application/json':
-            return jsonify({"error": "Content-Type must be application/json"}), 415
-
-        headers = request.headers
-
-        # Verify the secret key for authentication
-        if headers.get('X-Finnhub-Secret') != 'csamt3pr01qobflkbj30':
-            return jsonify({"error": "Invalid secret key"}), 403
-
-        # Acknowledge receipt of the event immediately
-        acknowledgement_response = jsonify({"status": "received"}), 200
-        
-        # Process the incoming data
-        data = request.json  # This will parse the JSON payload
-        print("Received Webhook Event:", data)
-
-        return acknowledgement_response  # Return the acknowledgement response
+    # Check the Content-Type to ensure it's JSON
+    if request.content_type != 'application/json':
+        return jsonify({"error": "Unsupported Media Type"}), 415
+    
+    # Get the X-Finnhub-Secret header from the request
+    request_secret = request.headers.get('X-Finnhub-Secret')
+    
+    # Verify if the secret key matches
+    if request_secret != FINNHUB_SECRET:
+        return jsonify({"error": "Unauthorized request"}), 403
+    
+    # Immediately send a 200 acknowledgment to prevent webhook disablement
+    acknowledgment_response = jsonify({"status": "received"}), 200
+    
+    # Retrieve and process the event data
+    event_data = request.json
+    print(f"Received Finnhub Webhook Event: {event_data}")
+    
+    # TODO: Add any specific logic to handle the webhook event here, such as updating trading algorithms
+    
+    return acknowledgment_response  # Respond with acknowledgment
 
 if __name__ == '__main__':
-    app.run(port=5000, debug=True)
+    app.run(debug=True)
