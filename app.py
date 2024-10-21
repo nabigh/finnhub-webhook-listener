@@ -14,7 +14,7 @@ def finnhub_webhook():
     # Log the host header
     print(f"Host: {request.host}")
 
-    # Log all other headers
+    # Log all headers
     for header, value in request.headers:
         print(f"{header}: {value}")
 
@@ -23,8 +23,12 @@ def finnhub_webhook():
     print("\nRequest Body:")
     print(body)
 
+    # Check if Content-Type is present
+    content_type = request.headers.get('Content-Type')
+    print(f"Content-Type: {content_type}")
+
     # Verify if the content-type is application/json
-    if request.content_type != 'application/json':
+    if content_type != 'application/json':
         return jsonify({"error": "Unsupported Media Type"}), 415
 
     # Get the X-Finnhub-Secret header from the request
