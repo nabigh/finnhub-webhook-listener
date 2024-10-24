@@ -31,19 +31,22 @@ def receive_symbols():
 
     return jsonify({'message': 'Symbols processed successfully!', 'symbols': symbols, 'prices': prices}), 200
 
-@app.route('/Kraang', methods=['GET'])
-def kraang_endpoint():
-    """Endpoint for Kraang to retrieve stock data."""
-    # Example of stock symbols, ideally this should come from some request
-    symbols = ['AAPL', 'GOOGL', 'TSLA']
+@app.route('/Kraang', methods=['POST'])  # Ensure this endpoint accepts POST requests
+def kraang():
+    data = request.get_json()
+    logging.info(f"Received data from Kraang: {data}")
+
+    # Validate the secret key (optional based on your design)
+    if data.get('secret') != SECRET_KEY:
+        return jsonify({'error': 'Invalid secret key'}), 403
+
+    # Process the request and return stock data
+    symbols = data.get('symbols', [])
     prices = {}
-    
     for symbol in symbols:
-        price = get_stock_price(symbol)
-        prices[symbol] = price
+        prices[symbol] = get_stock_price(symbol)  # This should call your existing function
 
-    return jsonify(prices), 200
-
+    return jsonify(prices), 200  # Return the stock prices as JSON response
 def get_stock_price(symbol):
     # Finnhub API endpoint for stock price
     finnhub_api_url = f"https://finnhub.io/api/v1/quote?symbol={symbol}&token=YOUR_FINNHUB_API_KEY"
