@@ -1,26 +1,30 @@
 from flask import Flask, request, jsonify
+import logging
 
 app = Flask(__name__)
-
-# Secret key for validation
 SECRET_KEY = 'csamt3pr01qobflkbj30'
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 @app.route('/finnhub-webhook', methods=['POST'])
 def receive_symbols():
     data = request.get_json()
-    print(f"Received data: {data}")  # Log the received data for debugging
+    logging.info(f"Received data: {data}")
 
-    # Check the secret key for validation
+    # Validate the secret key
     if data.get('secret') != SECRET_KEY:
         return jsonify({'error': 'Invalid secret key'}), 403
 
-    # Process the symbols
+    # Extract stock symbols
     symbols = data.get('symbols', [])
-    # Here you would add logic to process the symbols with Finnhub
-    print(f"Processing symbols: {symbols}")
+    logging.info(f"Processing symbols: {symbols}")
 
-    # Return success message
-    return jsonify({'message': 'Symbols received successfully!'}), 200
+    # Here you can add logic to store symbols or process further
+    # For now, we'll just print them
+    print(f"Processed Symbols: {symbols}")
+
+    return jsonify({'message': 'Symbols processed successfully!', 'symbols': symbols}), 200
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)  # Change port if needed
+    app.run(host='0.0.0.0', port=5000)
