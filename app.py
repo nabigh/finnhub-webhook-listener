@@ -54,7 +54,7 @@ def fetch_stock_data(symbols):
     for symbol in symbols:
         try:
             # Example Finnhub API call to get current price
-            response = requests.get(f'https://finnhub.io/api/v1/quote?symbol={symbol}&token=YOUR_FINNHUB_API_KEY')
+            response = requests.get(f'https://finnhub.io/api/v1/quote?symbol={symbol}&token=csamt3pr01qobflkbj1gcsamt3pr01qobflkbj20')
             response.raise_for_status()  # Raise an error for bad responses
             data = response.json()
 
