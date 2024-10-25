@@ -1,19 +1,22 @@
 from flask import Flask, request, jsonify
 import os
 import logging
+import requests
 
 app = Flask(__name__)
 
 # Enable logging for better debugging
 logging.basicConfig(level=logging.DEBUG)
 
-# Original Route: Finnhub Webhook listener (unchanged)
+# Environment variable for secret key
+FINNHUB_WEBHOOK_SECRET = os.getenv('FINNHUB_WEBHOOK_SECRET', 'csamt3pr01qobflkbj30')
+
 @app.route('/finnhub-webhook', methods=['POST'])
 def finnhub_webhook():
     # Log request headers, content type, and body for debugging
-    print("Request Headers:", request.headers)
-    print("Request Content-Type:", request.content_type)
-    print("Request Body:", request.get_data(as_text=True))
+    logging.info("Request Headers: %s", request.headers)
+    logging.info("Request Content-Type: %s", request.content_type)
+    logging.info("Request Body: %s", request.get_data(as_text=True))
     
     # Check for missing Content-Type and assume JSON if missing
     if request.content_type is None or request.content_type != 'application/json':
@@ -27,66 +30,54 @@ def finnhub_webhook():
         data = request.get_json()
 
     # Verify the X-Finnhub-Secret header
-    if request.headers.get('X-Finnhub-Secret') != os.getenv('FINNHUB_WEBHOOK_SECRET'):
+    if request.headers.get('X-Finnhub-Secret') != FINNHUB_WEBHOOK_SECRET:
         return jsonify({"error": "Unauthorized request"}), 403
 
     # Process the JSON body
     try:
         if not data:
             raise ValueError("No JSON body found")
-        print("Received JSON:", data)
+        logging.info("Received JSON: %s", data)
 
-        # Handle the webhook data (you can add more logic here)
+        # Handle the webhook data
         if data.get('event') == 'earnings':
-            print(f"Earnings data: {data['data']}")
+            logging.info(f"Earnings data: {data['data']}")
 
-        return jsonify({"status": "success"}), 200
+        # Fetch stock data (Example)
+        stock_symbols = data.get('symbols', [])
+        stock_data = fetch_stock_data(stock_symbols)
+
+        if not stock_data:
+            logging.warning("No stock data retrieved.")
+            return jsonify({"error": "No stock data found"}), 404
+        
+        logging.info("Retrieved stock data: %s", stock_data)
+        return jsonify({"status": "success", "data": stock_data}), 200
 
     except Exception as e:
-        # Log the error for debugging
         logging.error(f"Error processing request: {str(e)}")
         return jsonify({"error": "Internal Server Error"}), 500
 
-# New Route: Kraang to request stock data (new functionality)
-@app.route('/Kraang', methods=['POST'])
-def kraang_data():
-    # Log the incoming request
-    print("Kraang Request Body:", request.get_data(as_text=True))
-
-    # Check for missing Content-Type and assume JSON if missing
-    if request.content_type is None or request.content_type != 'application/json':
-        logging.warning("Missing or incorrect Content-Type. Assuming application/json.")
+def fetch_stock_data(symbols):
+    stock_data = {}
+    for symbol in symbols:
         try:
-            data = request.get_json(force=True)
+            # Example Finnhub API call to get current price
+            response = requests.get(f'https://finnhub.io/api/v1/quote?symbol={symbol}&token=csamt3pr01qobflkbj1gcsamt3pr01qobflkbj20')
+            response.raise_for_status()  # Raise an error for bad responses
+            data = response.json()
+
+            # Ensure the necessary data is available
+            if 'c' in data:
+                stock_data[symbol] = {'current_price': data['c']}
+            else:
+                logging.warning(f"No current price found for {symbol}.")
+        except requests.exceptions.HTTPError as http_err:
+            logging.error(f"HTTP error occurred for {symbol}: {http_err}")
         except Exception as e:
-            logging.error(f"Error parsing JSON body: {str(e)}")
-            return jsonify({"error": "Invalid JSON body"}), 400
-    else:
-        data = request.get_json()
-
-    # Verify the secret key in the request body
-    if data.get('secret') != os.getenv('FINNHUB_WEBHOOK_SECRET'):
-        return jsonify({"error": "Unauthorized request"}), 403
-
-    # Process the JSON body to extract stock symbols
-    try:
-        symbols = data.get('symbols', [])
-        if not symbols:
-            return jsonify({"error": "No symbols provided"}), 400
-
-        print("Processing symbols for Kraang:", symbols)
-
-        # Simulate fetching stock data for the requested symbols (logic can be expanded)
-        stock_data = {}
-        for symbol in symbols:
-            # Example data, replace with actual Finnhub API call
-            stock_data[symbol] = {"current_price": 100.0, "volume": 10000}
-
-        return jsonify({"stock_data": stock_data}), 200
-
-    except Exception as e:
-        logging.error(f"Error processing Kraang data request: {str(e)}")
-        return jsonify({"error": "Internal Server Error"}), 500
+            logging.error(f"Failed to retrieve data for {symbol}: {e}")
+    
+    return stock_data
 
 # Flask app settings
 if __name__ == "__main__":
