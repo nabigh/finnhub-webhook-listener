@@ -11,13 +11,14 @@ logging.basicConfig(level=logging.DEBUG)
 # Environment variable for secret key
 FINNHUB_WEBHOOK_SECRET = os.getenv('FINNHUB_WEBHOOK_SECRET', 'csamt3pr01qobflkbj30')
 
+
 @app.route('/finnhub-webhook', methods=['POST'])
 def finnhub_webhook():
     # Log request headers, content type, and body for debugging
     logging.info("Request Headers: %s", request.headers)
     logging.info("Request Content-Type: %s", request.content_type)
     logging.info("Request Body: %s", request.get_data(as_text=True))
-    
+
     # Check for missing Content-Type and assume JSON if missing
     if request.content_type is None or request.content_type != 'application/json':
         logging.warning("Missing or incorrect Content-Type. Assuming application/json.")
@@ -43,20 +44,21 @@ def finnhub_webhook():
         if data.get('event') == 'earnings':
             logging.info(f"Earnings data: {data['data']}")
 
-        # Fetch stock data (Example)
+        # Fetch stock data for Kraang
         stock_symbols = data.get('symbols', [])
         stock_data = fetch_stock_data(stock_symbols)
 
         if not stock_data:
             logging.warning("No stock data retrieved.")
             return jsonify({"error": "No stock data found"}), 404
-        
+
         logging.info("Retrieved stock data: %s", stock_data)
         return jsonify({"status": "success", "data": stock_data}), 200
 
     except Exception as e:
         logging.error(f"Error processing request: {str(e)}")
         return jsonify({"error": "Internal Server Error"}), 500
+
 
 def fetch_stock_data(symbols):
     stock_data = {}
@@ -76,8 +78,28 @@ def fetch_stock_data(symbols):
             logging.error(f"HTTP error occurred for {symbol}: {http_err}")
         except Exception as e:
             logging.error(f"Failed to retrieve data for {symbol}: {e}")
-    
+
     return stock_data
+
+
+@app.route('/Kraang', methods=['POST'])
+def kraang_endpoint():
+    # Endpoint for Kraang to fetch stock data
+    logging.info("Kraang endpoint called.")
+    data = request.get_json()
+
+    if not data or 'symbols' not in data:
+        return jsonify({"error": "No symbols provided"}), 400
+
+    symbols = data['symbols']
+    stock_data = fetch_stock_data(symbols)
+
+    if not stock_data:
+        return jsonify({"error": "No stock data found"}), 404
+
+    logging.info("Stock data for Kraang: %s", stock_data)
+    return jsonify({"status": "success", "data": stock_data}), 200
+
 
 # Flask app settings
 if __name__ == "__main__":
